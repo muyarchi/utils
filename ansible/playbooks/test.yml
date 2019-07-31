@@ -1,0 +1,8 @@
+---
+- hosts: localhost
+  roles:
+    - role: localhost-role
+
+- hosts: baremetal
+  roles:
+    - role: baremetal-role

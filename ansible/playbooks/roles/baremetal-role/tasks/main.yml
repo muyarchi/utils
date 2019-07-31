@@ -1,0 +1,36 @@
+---
+- name: Print interface information
+  debug:
+    msg: "{{ ansible_interfaces }}"
+
+- name: Get node name from IDF for host "{{ inventory_hostname }}"
+  set_fact:
+    node_name: "{{ item.key }}"
+  with_dict: "{{ idf.kubespray.hostnames }}"
+  when: item.value == inventory_hostname
+
+- name: Set facts for the node "{{ node_name }}"
+  set_fact:
+    node: "{{ nodes | selectattr('name', 'equalto', node_name) | first }}"
+
+- name: Fetch mgmt network interface name
+  set_fact:
+    network_interface: "{{ (node.interfaces[idf.net_config.mgmt.interface].vlan == 'native') | ternary(interface.device, interface.device + '.' + node.interfaces[idf.net_config.mgmt.interface].vlan) }}"
+  loop: "{{ ansible_interfaces | map('regex_replace', '-', '_') | map('regex_replace', '^', 'ansible_') | map('extract', hostvars[inventory_hostname]) |  selectattr('macaddress','defined') | list }}"
+  loop_control:
+    loop_var: interface
+  when: interface.macaddress == node.interfaces[idf.net_config.mgmt.interface].mac_address
+
+- name: Fetch mgmt network interface name
+  set_fact:
+    neutron_external_interface: "{{ (node.interfaces[idf.net_config.neutron.interface].vlan == 'native') | ternary(interface.device, interface.device + '.' + node.interfaces[idf.net_config.neutron.interface].vlan) }}"
+  loop: "{{ ansible_interfaces | map('regex_replace', '-', '_') | map('regex_replace', '^', 'ansible_') | map('extract', hostvars[inventory_hostname]) |  selectattr('macaddress','defined') | list }}"
+  loop_control:
+    loop_var: interface
+  when: interface.macaddress == node.interfaces[idf.net_config.neutron.interface].mac_address
+
+- name: Print device names
+  debug:
+    msg: 
+      - "{{ 'Mgmt: ' + network_interface }}"
+      - "{{ 'Neutron: ' + neutron_external_interface }}"
