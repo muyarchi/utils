@@ -1,0 +1,13 @@
+
+cloud:
+  auth:
+    auth_url: "{{ lookup('env', 'OS_AUTH_URL') }}"
+    username: "{{ lookup('env', 'OS_USERNAME') }}"
+    password: "{{ lookup('env', 'OS_PASSWORD') }}"
+    project_domain_name: "{{ lookup('env', 'OS_PROJECT_DOMAIN_NAME') }}"
+    user_domain_name: "{{ lookup('env', 'OS_USER_DOMAIN_NAME') }}"
+    project_name: "{{ lookup('env', 'OS_PROJECT_NAME') }}"
+  auth_type: "{{ lookup('env', 'OS_AUTH_PLUGIN') }}"
+  identity_api_version: "{{ lookup('env', 'OS_IDENTITY_API_VERSION') }}"
+  interface: "{{ lookup('env', 'OS_INTERFACE') }}"
+  region_name: "{{ lookup('env', 'OS_REGION_NAME') }}"

@@ -6,3 +6,42 @@
 - name: List Ironic nodes
   debug:
     msg: "{{ ironic_nodes.stdout_lines }}"
+
+- name: Set facts
+  set_fact:
+    clouds_yaml: "{{ ansible_env.HOME }}/.config/openstack/clouds.yaml"
+    clouds: {}
+    cloud_name: "sriram"
+    local_user: "{{ lookup('env', 'USER') }}"
+
+- name: "Ensure the ~/.config exists"
+  file:
+    name: "~{{ local_user | default('root') }}/.config"
+    state: directory
+    owner: "{{ local_user | default('root') }}"
+    mode: 0700
+
+- name: "Ensure ~/.config/openstack/ exists"
+  file:
+    name: "~{{ local_user | default('root') }}/.config/openstack"
+    state: directory
+    owner: "{{ local_user | default('root') }}"
+    mode: 0700
+
+- name: Read existing clouds.yaml
+  include_vars:
+    file: "{{ clouds_yaml }}"
+  ignore_errors: yes
+
+- name: Assign distro specific variables
+  include_vars:
+    file: "cloud.yml"
+
+- name: Add cloud information
+  set_fact:
+    clouds_yaml_data: "{ 'clouds' : {{ clouds | combine({ cloud_name: cloud }) }} }"
+
+- name: Print clouds
+  copy:
+    dest: "{{ clouds_yaml }}"
+    content: "{{ clouds_yaml_data | to_nice_yaml }}"
