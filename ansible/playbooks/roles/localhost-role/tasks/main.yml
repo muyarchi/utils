@@ -1,4 +1,11 @@
 ---
+- name: Set baremetal fact
+  set_fact:
+    virt_type: "{{ (lookup('env', 'BAREMETAL') == true) | ternary('kvm', 'qemu') }}"
+
+- debug:
+    msg: "{{ virt_type }}"
+
 - name: Get nodes from Ironic
   command: openstack --os-cloud bifrost baremetal node list
   register: ironic_nodes
