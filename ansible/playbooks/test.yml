@@ -2,7 +2,9 @@
 - hosts: localhost
   roles:
     - role: localhost-role
+      tags: [all, local]
 
 - hosts: baremetal
   roles:
     - role: baremetal-role
+      tags: [all, baremetal]

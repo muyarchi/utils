@@ -1,7 +1,21 @@
 ---
+#- name: Download zsh installer
+#  get_url:
+#    url: https://git.opnfv.org/functest/plain/functest/ci/download_images.sh
+#    dest: /tmp/download_functest_images.sh
+#    mode: 0755
+#
+#- name: Execute the zsh-installer.sh
+#  shell: /tmp/download_functest_images.sh /tmp/
+#
+#- name: Remove the zsh-installer.sh
+#  file:
+#    path: /tmp/download_functest_images.sh
+#    state: absent
+
 - name: Set baremetal fact
   set_fact:
-    virt_type: "{{ (lookup('env', 'BAREMETAL') == true) | ternary('kvm', 'qemu') }}"
+    virt_type: "{{ (lookup('env', 'BAREMETAL') == 'true') | ternary('kvm', 'qemu') }}"
 
 - debug:
     msg: "{{ virt_type }}"
@@ -16,39 +30,43 @@
 
 - name: Set facts
   set_fact:
-    clouds_yaml: "{{ ansible_env.HOME }}/.config/openstack/clouds.yaml"
-    clouds: {}
-    cloud_name: "sriram"
+    clouds_yaml_path: "{{ ansible_env.HOME }}/.config/openstack/clouds.yaml"
     local_user: "{{ lookup('env', 'USER') }}"
 
-- name: "Ensure the ~/.config exists"
-  file:
-    name: "~{{ local_user | default('root') }}/.config"
-    state: directory
-    owner: "{{ local_user | default('root') }}"
-    mode: 0700
+- name: Check if clouds.yaml exists
+  stat:
+    path: "{{ clouds_yaml_path }}"
+  register: clouds_yaml
 
-- name: "Ensure ~/.config/openstack/ exists"
-  file:
-    name: "~{{ local_user | default('root') }}/.config/openstack"
-    state: directory
-    owner: "{{ local_user | default('root') }}"
-    mode: 0700
+- block:
+  - name: "Ensure the ~/.config exists"
+    file:
+      name: "~{{ local_user }}/.config"
+      state: directory
+      owner: "{{ local_user }}"
+
+  - name: "Ensure ~/.config/openstack/ exists"
+    file:
+      name: "~{{ local_user }}/.config/openstack"
+      state: directory
+      owner: "{{ local_user }}"
+
+  - set_fact:
+      clouds: {}
+  when: clouds_yaml.stat.exists == false
 
 - name: Read existing clouds.yaml
   include_vars:
-    file: "{{ clouds_yaml }}"
-  ignore_errors: yes
+    file: "{{ clouds_yaml_path }}"
+  when: clouds_yaml.stat.exists == true
 
-- name: Assign distro specific variables
+- name: Parse environment variables set by openrc
   include_vars:
     file: "cloud.yml"
 
 - name: Add cloud information
-  set_fact:
-    clouds_yaml_data: "{ 'clouds' : {{ clouds | combine({ cloud_name: cloud }) }} }"
-
-- name: Print clouds
   copy:
-    dest: "{{ clouds_yaml }}"
-    content: "{{ clouds_yaml_data | to_nice_yaml }}"
+    dest: "{{ clouds_yaml_path }}"
+    content: "{{ item | to_nice_yaml(indent=2) }}"
+  with_items:
+    - "{ 'clouds' : {{ clouds | combine({ deploy_scenario: cloud }) }} }"
